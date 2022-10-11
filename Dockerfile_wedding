@@ -1,0 +1,63 @@
+FROM centos:centos8.4.2105
+
+RUN sed -i 's/mirrorlist/#mirrorlist/g' /etc/yum.repos.d/CentOS-* \
+  && sed -i 's|#baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g' /etc/yum.repos.d/CentOS-*
+
+# 安装 git、wget
+RUN yum update -y && yum install git wget -y \
+  # mysql 需要
+  && yum install -y libaio.* libnuma.* libtinfo.* 
+
+# nodejs@16 安装
+ENV NODE_PATH=/etc/node-v16.17.1-linux-x64/lib/node_modules
+RUN wget https://nodejs.org/dist/v16.17.1/node-v16.17.1-linux-x64.tar.xz \
+  && tar -xvf node-v16.17.1-linux-x64.tar.xz -C /etc/ \
+  && ln -sf /etc/node-v16.17.1-linux-x64/bin/node /bin/node \
+  && ln -sf /etc/node-v16.17.1-linux-x64/bin/npm /bin/npm \
+  && rm node-v16.17.1-linux-x64.tar.xz
+
+# 项目代码&安装依赖
+RUN git clone https://github.com/iammapping/wedding \
+  && npm install sails -g \
+  && ln -sf /etc/node-v16.17.1-linux-x64/bin/sails /bin/sails
+WORKDIR /wedding
+RUN npm i \
+  # 解决 `sails lift` 启动报错 `node[222]: ../src/node_contextify.cc:706:static void node::contextify::ContextifyScript::New(const v8::FunctionCallbackInfo<v8::Value>&): Assertion `args[1]->IsString()' failed.` 的报错
+  && npm i natives
+WORKDIR /
+
+# 安装 mysql@8.0
+RUN wget https://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-8.0.30-linux-glibc2.12-x86_64.tar.xz \
+  && tar -xvf mysql-8.0.30-linux-glibc2.12-x86_64.tar.xz -C /etc/ \
+  && ln -sf /etc/mysql-8.0.30-linux-glibc2.12-x86_64/bin/mysql /bin/mysql \
+  && ln -sf /etc/mysql-8.0.30-linux-glibc2.12-x86_64/bin/mysqld /bin/mysqld \
+  && ln -sf /etc/mysql-8.0.30-linux-glibc2.12-x86_64/bin/mysqld_safe /bin/mysqld_safe \
+  && rm mysql-8.0.30-linux-glibc2.12-x86_64.tar.xz \
+  # 初始化 mysql 服务 (--initialize-insecure 是无密码初始化; --initialize 会随机生成密码)
+  && mysqld --initialize-insecure
+
+# # 导入 sql
+# RUN echo -e "create database wedding;\nuse wedding;\n" >> init.sql \
+#   && cat /wedding/wedding.sql >> init.sql \
+#   && mysql < init.sql
+
+# 复制启动脚本
+COPY --chmod=777 start.sh /start.sh
+
+EXPOSE 1337
+ENTRYPOINT [ "bash" ,"/start.sh" ]
+# CMD [ "mysqld", "--user=root" ]
+
+
+
+# RUN yum install wget -y
+# RUN groupadd -r mysql && useradd -r -g mysql mysql
+# # 下载 gosu
+# RUN wget -O /usr/local/bin/gosu "https://github.com/tianon/gosu/releases/download/1.12/gosu-amd64" \
+#     && chmod +x /usr/local/bin/gosu \
+#     && gosu nobody true
+# # 设置 CMD，并以另外的用户执行
+# CMD [ "gosu", "mysql", "bash" ]
+
+# 使用管道符调用 SQL 文件
+# mysql -u root < xxx.sql
