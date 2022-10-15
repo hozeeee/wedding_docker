@@ -3,8 +3,8 @@ FROM centos:centos8.4.2105
 RUN sed -i 's/mirrorlist/#mirrorlist/g' /etc/yum.repos.d/CentOS-* \
   && sed -i 's|#baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g' /etc/yum.repos.d/CentOS-*
 
-# 安装 git、wget
-RUN yum update -y && yum install git wget -y \
+# 安装 wget
+RUN yum update -y && yum install wget -y \
   # mysql 需要
   && yum install -y libaio.* libnuma.* libtinfo.* 
 
@@ -14,17 +14,9 @@ RUN wget https://nodejs.org/dist/v16.17.1/node-v16.17.1-linux-x64.tar.xz \
   && tar -xvf node-v16.17.1-linux-x64.tar.xz -C /etc/ \
   && ln -sf /etc/node-v16.17.1-linux-x64/bin/node /bin/node \
   && ln -sf /etc/node-v16.17.1-linux-x64/bin/npm /bin/npm \
-  && rm node-v16.17.1-linux-x64.tar.xz
-
-# 项目代码&安装依赖
-RUN git clone https://github.com/iammapping/wedding \
+  && rm node-v16.17.1-linux-x64.tar.xz \
   && npm install sails -g \
   && ln -sf /etc/node-v16.17.1-linux-x64/bin/sails /bin/sails
-WORKDIR /wedding
-RUN npm i \
-  # 解决 `sails lift` 启动报错 `node[222]: ../src/node_contextify.cc:706:static void node::contextify::ContextifyScript::New(const v8::FunctionCallbackInfo<v8::Value>&): Assertion `args[1]->IsString()' failed.` 的报错
-  && npm i natives
-WORKDIR /
 
 # 安装 mysql@8.0
 RUN wget https://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-8.0.30-linux-glibc2.12-x86_64.tar.xz \
@@ -40,6 +32,14 @@ RUN wget https://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-8.0.30-linux-glibc2
 # RUN echo -e "create database wedding;\nuse wedding;\n" >> init.sql \
 #   && cat /wedding/wedding.sql >> init.sql \
 #   && mysql < init.sql
+
+# 项目代码&安装依赖 (https://github.com/iammapping/wedding)
+COPY wedding /wedding
+WORKDIR /wedding
+RUN npm i \
+  # 解决 `sails lift` 启动报错 `node[222]: ../src/node_contextify.cc:706:static void node::contextify::ContextifyScript::New(const v8::FunctionCallbackInfo<v8::Value>&): Assertion `args[1]->IsString()' failed.` 的报错
+  && npm i natives
+WORKDIR /
 
 # 复制启动脚本
 COPY --chmod=777 start.sh /start.sh
