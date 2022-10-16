@@ -18,13 +18,14 @@ RUN wget https://nodejs.org/dist/v16.17.1/node-v16.17.1-linux-x64.tar.xz \
   && npm install sails -g \
   && ln -sf /etc/node-v16.17.1-linux-x64/bin/sails /bin/sails
 
-# 安装 mysql@8.0
-RUN wget https://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-8.0.30-linux-glibc2.12-x86_64.tar.xz \
-  && tar -xvf mysql-8.0.30-linux-glibc2.12-x86_64.tar.xz -C /etc/ \
-  && ln -sf /etc/mysql-8.0.30-linux-glibc2.12-x86_64/bin/mysql /bin/mysql \
-  && ln -sf /etc/mysql-8.0.30-linux-glibc2.12-x86_64/bin/mysqld /bin/mysqld \
-  && ln -sf /etc/mysql-8.0.30-linux-glibc2.12-x86_64/bin/mysqld_safe /bin/mysqld_safe \
-  && rm mysql-8.0.30-linux-glibc2.12-x86_64.tar.xz \
+# 安装 mysql@5.7
+RUN wget https://downloads.mysql.com/archives/get/p/23/file/mysql-5.7.39-linux-glibc2.12-x86_64.tar.gz \
+  && tar -xvf mysql-5.7.39-linux-glibc2.12-x86_64.tar.gz -C /etc/ \
+  && ln -sf /etc/mysql-5.7.39-linux-glibc2.12-x86_64/bin/mysql /bin/mysql \
+  && ln -sf /etc/mysql-5.7.39-linux-glibc2.12-x86_64/bin/mysqld /bin/mysqld \
+  && ln -sf /etc/mysql-5.7.39-linux-glibc2.12-x86_64/bin/mysqld_safe /bin/mysqld_safe \
+  && if [ ! -d "/usr/local/mysql/" ]; then mkdir /usr/local/mysql/ ; fi \
+  && rm mysql-5.7.39-linux-glibc2.12-x86_64.tar.gz \
   # 初始化 mysql 服务 (--initialize-insecure 是无密码初始化; --initialize 会随机生成密码)
   && mysqld --initialize-insecure
 
